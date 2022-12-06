@@ -9,11 +9,10 @@ use std::{
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
-    let pool =
-        ThreadPool::build(rust_book_webserver::THREAD_POOL_SIZE_LIMIT - 1).unwrap_or_else(|err| {
-            eprintln!("Problem creating workers pool: {err}");
-            process::exit(1)
-        });
+    let pool = ThreadPool::build(rust_book_webserver::MAX_THREAD_POOL_SIZE).unwrap_or_else(|err| {
+        eprintln!("Problem creating workers pool: {err}");
+        process::exit(1)
+    });
 
     for stream in listener.incoming().take(10) {
         let stream = stream.unwrap();

@@ -4,7 +4,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-pub const THREAD_POOL_SIZE_LIMIT: usize = 10;
+pub const MAX_THREAD_POOL_SIZE: usize = 10;
 
 #[derive(Debug)]
 pub struct ThreadPool {
@@ -23,7 +23,7 @@ struct Worker {
 
 impl Worker {
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
-        let thread = thread::spawn(move || loop {
+        let thread = Some(thread::spawn(move || loop {
             let message = receiver.lock().unwrap().recv();
 
             match message {
@@ -37,12 +37,9 @@ impl Worker {
                     break;
                 }
             }
-        });
+        }));
 
-        Worker {
-            id,
-            thread: Some(thread),
-        }
+        Worker { id, thread }
     }
 }
 
@@ -51,8 +48,7 @@ type WorkerId = usize;
 impl ThreadPool {
     pub fn build(size: usize) -> Result<ThreadPool, PoolCreationError> {
         match size {
-            0 | THREAD_POOL_SIZE_LIMIT.. => Err(PoolCreationError),
-            _ => {
+            1..=MAX_THREAD_POOL_SIZE => {
                 let (sender, receiver) = mpsc::channel();
                 let receiver = Arc::new(Mutex::new(receiver));
                 let workers = (0..=size)
@@ -66,6 +62,7 @@ impl ThreadPool {
                     sender: Some(sender),
                 })
             }
+            _ => Err(PoolCreationError),
         }
     }
 
